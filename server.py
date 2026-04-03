@@ -239,6 +239,20 @@ HTML_PAGE = r"""<!DOCTYPE html>
     text-align: center;
     padding: 16px;
   }
+
+  /* Mobile responsive */
+  @media (max-width: 420px) {
+    body { padding: 16px 10px; }
+    .card { padding: 16px; }
+    .type-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .type-btn { padding: 10px 4px; font-size: 10px; }
+    .size-btn { padding: 10px 4px; }
+    .row { grid-template-columns: 1fr; gap: 8px; }
+    .row-3 { gap: 6px; }
+    .header h1 { font-size: 18px; }
+    .header img { height: 50px !important; }
+    input, select { font-size: 16px; padding: 11px 10px; }
+  }
 </style>
 </head>
 <body>
