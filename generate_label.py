@@ -161,19 +161,18 @@ def generate_small(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
     hline(c, y, M, W - M)
     y -= 1
 
-    # Row 3: Warning text + QR
+    # Row 3: Warning text (left side) + QR (bottom-right corner, bigger)
     c.setFillColor(TXT4)
     c.setFont("Helvetica", 2.3)
-    c.drawString(M + 1, y - 3, "SALE TO PERSONS UNDER 21 PROHIBITED. NOT FOR INGESTION. KEEP OUT OF REACH OF CHILDREN.")
-    c.setFont("Helvetica", 2.3)
-    c.drawString(M + 1, y - 6.5, "This product has not been evaluated by the FDA. Contains <0.3% Delta-9 THC per dry weight.")
-    c.setFont("Helvetica", 2.3)
-    c.drawString(M + 1, y - 10, "SPARK 8 · shopspark8.com · FL Rule 5K-4.034 · Store in cool, dry place.")
+    c.drawString(M + 1, y - 3, "SALE TO PERSONS UNDER 21 PROHIBITED. NOT FOR INGESTION.")
+    c.drawString(M + 1, y - 6.5, "KEEP OUT OF REACH OF CHILDREN. NOT EVALUATED BY THE FDA.")
+    c.drawString(M + 1, y - 10, "Contains <0.3% Delta-9 THC. Store in cool, dry place.")
+    c.drawString(M + 1, y - 13.5, "SPARK 8 · shopspark8.com · FL Rule 5K-4.034")
 
-    # Small QR at far right
-    qr_s = 14
+    # QR in bottom-right corner, as big as possible
+    qr_s = 22
     qr_img = generate_qr("https://shopspark8.com", box_size=2)
-    c.drawImage(qr_img, W - M - qr_s - 1, y - qr_s + 2, width=qr_s, height=qr_s)
+    c.drawImage(qr_img, W - M - qr_s - 1, M + 1, width=qr_s, height=qr_s)
 
 
 # ════════════════════════════════════════════════════════════
@@ -274,28 +273,27 @@ def generate_medium(c, W, H, strain, thc_mg, serving_size, batch, exp_date, prod
     hline(c, y, M, W - M)
     y -= 1
 
-    # ── Footer: QR + dist + legal fine print ──
-    qr_s = 18
-    qr_img = generate_qr("https://shopspark8.com", box_size=2)
-    c.drawImage(qr_img, M + 1, y - qr_s, width=qr_s, height=qr_s)
-
-    ix = M + qr_s + 4
+    # ── Footer: Dist info (left) + QR (bottom-right, bigger) ──
     c.setFillColor(TXT4)
     c.setFont("Helvetica", 3)
-    c.drawString(ix, y - 3, "DISTRIBUTED BY")
+    c.drawString(M + 1, y - 3, "DISTRIBUTED BY")
     c.setFillColor(TXT)
     c.setFont("Helvetica-Bold", 4.5)
-    c.drawString(ix, y - 8, "SPARK 8  ·  Smoke Shop & Lounge")
+    c.drawString(M + 1, y - 8, "SPARK 8  ·  Smoke Shop & Lounge")
     c.setFillColor(TXT3)
     c.setFont("Helvetica", 3.5)
-    c.drawString(ix, y - 13, "shopspark8.com  ·  Tampa Bay, FL")
+    c.drawString(M + 1, y - 13, "shopspark8.com  ·  Tampa Bay, FL")
 
-    # Legal fine print below QR
+    # Legal fine print
     c.setFillColor(TXT4)
     c.setFont("Helvetica", 2)
-    fp_y = y - qr_s - 3
-    c.drawString(M + 1, fp_y, "This product has not been evaluated by the FDA. Not intended to diagnose, treat, cure, or prevent any disease.")
-    c.drawString(M + 1, fp_y - 3, "Hemp derived. <0.3% Delta-9 THC. 2018 Farm Bill compliant. FL Rule 5K-4.034.")
+    c.drawString(M + 1, y - 19, "This product has not been evaluated by the FDA. Not intended to diagnose, treat, cure, or prevent any disease.")
+    c.drawString(M + 1, y - 22, "Hemp derived. <0.3% Delta-9 THC. 2018 Farm Bill compliant. FL Rule 5K-4.034.")
+
+    # QR bottom-right corner
+    qr_s = 24
+    qr_img = generate_qr("https://shopspark8.com", box_size=2)
+    c.drawImage(qr_img, W - M - qr_s - 1, M + 1, width=qr_s, height=qr_s)
 
 
 # ════════════════════════════════════════════════════════════
@@ -399,31 +397,30 @@ def generate_large(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
     hline(c, y, M, W - M)
     y -= 3
 
-    # ── Footer: QR + dist ──
-    qr_s = 28
-    qr_img = generate_qr("https://shopspark8.com", box_size=3)
-    c.drawImage(qr_img, M + 2, y - qr_s, width=qr_s, height=qr_s)
-
-    ix = M + qr_s + 8
+    # ── Footer: Dist info (left) + QR (bottom-right, bigger) ──
     c.setFillColor(TXT4)
     c.setFont("Helvetica", 4)
-    c.drawString(ix, y - 5, "DISTRIBUTED BY")
+    c.drawString(M + 2, y - 5, "DISTRIBUTED BY")
     c.setFillColor(TXT)
     c.setFont("Helvetica-Bold", 6.5)
-    c.drawString(ix, y - 13, "SPARK 8")
+    c.drawString(M + 2, y - 13, "SPARK 8")
     c.setFillColor(TXT2)
     c.setFont("Helvetica", 5)
-    c.drawString(ix, y - 20, "Smoke Shop & Lounge  ·  Tampa Bay, FL")
+    c.drawString(M + 2, y - 20, "Smoke Shop & Lounge  ·  Tampa Bay, FL")
     c.setFillColor(TXT3)
     c.setFont("Helvetica", 4.5)
-    c.drawString(ix, y - 27, "shopspark8.com")
+    c.drawString(M + 2, y - 27, "shopspark8.com")
 
-    # Legal fine print below QR
+    # Legal fine print
     c.setFillColor(TXT4)
     c.setFont("Helvetica", 2.5)
-    fp_y = y - qr_s - 4
-    c.drawString(M + 2, fp_y, "This product has not been evaluated by the FDA and is not intended to diagnose, treat, cure, or prevent any disease.")
-    c.drawString(M + 2, fp_y - 4, "Hemp derived. <0.3% Delta-9 THC per dry weight. 2018 Farm Bill compliant. FL Rule 5K-4.034.")
+    c.drawString(M + 2, y - 34, "This product has not been evaluated by the FDA and is not intended to diagnose, treat, cure, or prevent any disease.")
+    c.drawString(M + 2, y - 38, "Hemp derived. <0.3% Delta-9 THC per dry weight. 2018 Farm Bill compliant. FL Rule 5K-4.034.")
+
+    # QR bottom-right corner, big
+    qr_s = 36
+    qr_img = generate_qr("https://shopspark8.com", box_size=3)
+    c.drawImage(qr_img, W - M - qr_s - 2, M + 2, width=qr_s, height=qr_s)
 
 
 # ════════════════════════════════════════════════════════════

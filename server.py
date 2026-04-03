@@ -477,11 +477,54 @@ function renderHistory() {
 """
 
 
+import re
+import time
+from collections import defaultdict
+
+# ── Security: rate limiter ──────────────────────────────────
+_rate_limit = defaultdict(list)  # ip -> [timestamps]
+MAX_REQUESTS_PER_MIN = 20
+
+def _is_rate_limited(ip):
+    now = time.time()
+    _rate_limit[ip] = [t for t in _rate_limit[ip] if now - t < 60]
+    if len(_rate_limit[ip]) >= MAX_REQUESTS_PER_MIN:
+        return True
+    _rate_limit[ip].append(now)
+    return False
+
+def _sanitize(text, max_len=50):
+    """Strip anything that isn't alphanumeric, space, dash, dot, slash, or parens."""
+    if not isinstance(text, str):
+        return ""
+    text = text[:max_len]
+    return re.sub(r'[^\w\s\-\./()\#]', '', text)
+
+def _safe_filename(text):
+    """Only allow safe filename characters."""
+    return re.sub(r'[^a-zA-Z0-9_\-]', '', text.replace(' ', '_'))
+
+
 class LabelHandler(http.server.BaseHTTPRequestHandler):
+
+    def _send_security_headers(self):
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('X-Frame-Options', 'DENY')
+        self.send_header('X-XSS-Protection', '1; mode=block')
+        self.send_header('Referrer-Policy', 'no-referrer')
+        self.send_header('Content-Security-Policy', "default-src 'self' 'unsafe-inline'; img-src 'self' data:")
+
     def do_GET(self):
+        # Rate limiting
+        client_ip = self.client_address[0]
+        if _is_rate_limited(client_ip):
+            self.send_error(429, "Too many requests")
+            return
+
         if self.path == '/' or self.path == '/index.html':
             self.send_response(200)
             self.send_header('Content-Type', 'text/html')
+            self._send_security_headers()
             self.end_headers()
             self.wfile.write(HTML_PAGE.encode())
         elif self.path == '/logo':
@@ -489,6 +532,8 @@ class LabelHandler(http.server.BaseHTTPRequestHandler):
             if os.path.exists(logo_path):
                 self.send_response(200)
                 self.send_header('Content-Type', 'image/png')
+                self.send_header('Cache-Control', 'public, max-age=86400')
+                self._send_security_headers()
                 self.end_headers()
                 with open(logo_path, 'rb') as f:
                     self.wfile.write(f.read())
@@ -496,11 +541,17 @@ class LabelHandler(http.server.BaseHTTPRequestHandler):
                 self.send_error(404)
         elif self.path.startswith('/download/'):
             filename = urllib.parse.unquote(self.path[10:])
+            # Path traversal protection
+            filename = os.path.basename(filename)
+            if not filename.endswith('.pdf') or '..' in filename:
+                self.send_error(403)
+                return
             filepath = os.path.join(OUTPUT_DIR, filename)
-            if os.path.exists(filepath):
+            if os.path.exists(filepath) and os.path.commonpath([OUTPUT_DIR, filepath]) == OUTPUT_DIR:
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/pdf')
                 self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+                self._send_security_headers()
                 self.end_headers()
                 with open(filepath, 'rb') as f:
                     self.wfile.write(f.read())
@@ -510,37 +561,66 @@ class LabelHandler(http.server.BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
+        client_ip = self.client_address[0]
+        if _is_rate_limited(client_ip):
+            self.send_error(429, "Too many requests")
+            return
+
         if self.path == '/generate':
-            length = int(self.headers['Content-Length'])
-            body = json.loads(self.rfile.read(length))
+            # Reject oversized payloads
+            length = int(self.headers.get('Content-Length', 0))
+            if length > 4096:
+                self.send_error(413, "Payload too large")
+                return
+
             try:
-                strain = body.get('strain', 'Unknown')
-                safe_strain = strain.replace(' ', '_').replace('/', '-')
-                batch = body.get('batch', 'BATCH')
+                body = json.loads(self.rfile.read(length))
+            except (json.JSONDecodeError, ValueError):
+                self.send_error(400, "Invalid JSON")
+                return
+
+            try:
+                # Sanitize all inputs
+                strain = _sanitize(body.get('strain', 'Unknown'), 30)
+                batch = _sanitize(body.get('batch', 'BATCH'), 30)
+                thc_mg = _sanitize(body.get('thc_mg', '25'), 10)
+                serving_size = _sanitize(body.get('serving_size', ''), 40)
+                exp_date = _sanitize(body.get('exp_date', ''), 10)
+                product_type = _sanitize(body.get('product_type', 'cartridge'), 20)
                 label_size = body.get('label_size', 'medium')
-                filename = f"label_{safe_strain}_{batch}_{label_size}.pdf"
+
+                # Validate label_size
+                if label_size not in ('small', 'medium', 'large'):
+                    label_size = 'medium'
+
+                # Safe filename
+                safe_strain = _safe_filename(strain)
+                safe_batch = _safe_filename(batch)
+                filename = f"label_{safe_strain}_{safe_batch}_{label_size}.pdf"
                 out_path = os.path.join(OUTPUT_DIR, filename)
 
                 generate_label(
                     strain=strain,
-                    thc_mg=body.get('thc_mg', '25'),
-                    serving_size=body.get('serving_size', ''),
+                    thc_mg=thc_mg,
+                    serving_size=serving_size,
                     batch=batch,
-                    exp_date=body.get('exp_date', ''),
-                    product_type=body.get('product_type', 'cartridge'),
+                    exp_date=exp_date,
+                    product_type=product_type,
                     label_size=label_size,
                     output_file=out_path,
                 )
 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
+                self._send_security_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({'success': True, 'filename': filename}).encode())
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
+                self._send_security_headers()
                 self.end_headers()
-                self.wfile.write(json.dumps({'success': False, 'error': str(e)}).encode())
+                self.wfile.write(json.dumps({'success': False, 'error': 'Generation failed'}).encode())
         else:
             self.send_error(404)
 
