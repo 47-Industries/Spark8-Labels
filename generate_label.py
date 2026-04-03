@@ -107,7 +107,7 @@ def hline(c, y, x1, x2):
 # ════════════════════════════════════════════════════════════
 # SMALL LABEL (2" x 1") — compact compliance sticker
 # ════════════════════════════════════════════════════════════
-def generate_small(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type):
+def generate_small(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type, strain_type="Hybrid", total_weight="3.5g"):
     M = 4
     IW = W - 2 * M
 
@@ -132,7 +132,7 @@ def generate_small(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
     ptype = PRODUCT_TYPES.get(product_type, product_type.upper())
     c.setFillColor(TXT3)
     c.setFont("Helvetica", 4)
-    c.drawString(M + 16, y - 10, f"THCa {ptype}")
+    c.drawString(M + 16, y - 10, f"THCa {ptype}  ·  {strain_type}  ·  {total_weight}")
 
     y -= 15
     hline(c, y, M, W - M)
@@ -178,7 +178,7 @@ def generate_small(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
 # ════════════════════════════════════════════════════════════
 # MEDIUM LABEL (3" x 2") — standard compliance sticker
 # ════════════════════════════════════════════════════════════
-def generate_medium(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type):
+def generate_medium(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type, strain_type="Hybrid", total_weight="3.5g"):
     M = 6
     IW = W - 2 * M
 
@@ -201,7 +201,7 @@ def generate_medium(c, W, H, strain, thc_mg, serving_size, batch, exp_date, prod
     ptype = PRODUCT_TYPES.get(product_type, product_type.upper())
     c.setFillColor(TXT3)
     c.setFont("Helvetica", 5)
-    c.drawString(M + 24, y - 14, f"THCa {ptype}")
+    c.drawString(M + 24, y - 14, f"THCa {ptype}  ·  {strain_type}  ·  {total_weight}")
 
     y -= 22
     hline(c, y, M, W - M)
@@ -299,7 +299,7 @@ def generate_medium(c, W, H, strain, thc_mg, serving_size, batch, exp_date, prod
 # ════════════════════════════════════════════════════════════
 # LARGE LABEL (4" x 3") — full compliance label
 # ════════════════════════════════════════════════════════════
-def generate_large(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type):
+def generate_large(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type, strain_type="Hybrid", total_weight="3.5g"):
     M = 8
     IW = W - 2 * M
 
@@ -322,7 +322,7 @@ def generate_large(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
     ptype = PRODUCT_TYPES.get(product_type, product_type.upper())
     c.setFillColor(TXT3)
     c.setFont("Helvetica", 6.5)
-    c.drawString(M + 32, y - 18, f"THCa {ptype}")
+    c.drawString(M + 32, y - 18, f"THCa {ptype}  ·  {strain_type}  ·  {total_weight}")
     c.setFillColor(TXT4)
     c.setFont("Helvetica", 5)
     c.drawString(M + 32, y - 26, "Smoke Shop & Lounge  ·  Tampa Bay, FL")
@@ -428,7 +428,8 @@ def generate_large(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
 # ════════════════════════════════════════════════════════════
 def generate_label(strain="Blue Dream", thc_mg="25", serving_size="1 cartridge (0.5g)",
                    batch="BT-2026-0401", exp_date="08/2027",
-                   product_type="cartridge", label_size="medium", output_file=None):
+                   product_type="cartridge", label_size="medium",
+                   strain_type="Hybrid", total_weight="3.5g", output_file=None):
 
     if output_file is None:
         safe_strain = strain.replace(" ", "_").replace("/", "-")
@@ -450,11 +451,11 @@ def generate_label(strain="Blue Dream", thc_mg="25", serving_size="1 cartridge (
 
     # Route to size-specific layout
     if label_size == "small":
-        generate_small(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type)
+        generate_small(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type, strain_type, total_weight)
     elif label_size == "large":
-        generate_large(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type)
+        generate_large(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type, strain_type, total_weight)
     else:
-        generate_medium(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type)
+        generate_medium(c, W, H, strain, thc_mg, serving_size, batch, exp_date, product_type, strain_type, total_weight)
 
     c.save()
     print(f"Label generated: {out_path}")
@@ -470,11 +471,14 @@ if __name__ == "__main__":
     parser.add_argument("--exp", default="08/2027", help="Expiration date")
     parser.add_argument("--type", default="cartridge", help="Product type")
     parser.add_argument("--size", default="medium", choices=["small", "medium", "large"], help="Label size")
+    parser.add_argument("--strain-type", default="Hybrid", choices=["Sativa", "Indica", "Hybrid"], help="Strain type")
+    parser.add_argument("--weight", default="3.5g", help="Total weight")
     parser.add_argument("--output", default=None, help="Output filename")
     args = parser.parse_args()
 
     generate_label(
         strain=args.strain, thc_mg=args.thca, serving_size=args.serving,
         batch=args.batch, exp_date=args.exp, product_type=args.type,
-        label_size=args.size, output_file=args.output,
+        label_size=args.size, strain_type=args.strain_type,
+        total_weight=args.weight, output_file=args.output,
     )

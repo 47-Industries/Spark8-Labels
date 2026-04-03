@@ -307,6 +307,27 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
       <div class="row">
         <div class="field">
+          <label for="strain_type">Strain Type</label>
+          <select id="strain_type">
+            <option value="Sativa">Sativa</option>
+            <option value="Indica">Indica</option>
+            <option value="Hybrid" selected>Hybrid</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="total_weight">Total Weight</label>
+          <select id="total_weight">
+            <option value="1g">1 gram</option>
+            <option value="3.5g" selected>3.5 grams</option>
+            <option value="7g">7 grams</option>
+            <option value="14g">14 grams</option>
+            <option value="28g">28 grams</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
           <label for="thc_mg">THCa Amount</label>
           <select id="thc_mg">
             <option value="5">5 mg</option>
@@ -427,6 +448,8 @@ form.addEventListener('submit', async (e) => {
 
   const data = {
     strain: document.getElementById('strain').value.trim(),
+    strain_type: document.getElementById('strain_type').value,
+    total_weight: document.getElementById('total_weight').value,
     thc_mg: document.getElementById('thc_mg').value,
     serving_size: servingSelect.value,
     batch: document.getElementById('batch').value.trim(),
@@ -465,7 +488,7 @@ function renderHistory() {
     <div class="history-item">
       <div>
         <div class="strain">${l.strain}</div>
-        <div class="meta">${l.thc_mg}mg · ${l.product_type} · ${l.label_size} · ${l.batch}</div>
+        <div class="meta">${l.strain_type} · ${l.total_weight} · ${l.thc_mg}mg · ${l.product_type} · ${l.batch}</div>
       </div>
       <a href="/download/${encodeURIComponent(l.filename)}" target="_blank">PDF</a>
     </div>
@@ -582,12 +605,18 @@ class LabelHandler(http.server.BaseHTTPRequestHandler):
             try:
                 # Sanitize all inputs
                 strain = _sanitize(body.get('strain', 'Unknown'), 30)
+                strain_type = _sanitize(body.get('strain_type', 'Hybrid'), 10)
+                total_weight = _sanitize(body.get('total_weight', '3.5g'), 10)
                 batch = _sanitize(body.get('batch', 'BATCH'), 30)
                 thc_mg = _sanitize(body.get('thc_mg', '25'), 10)
                 serving_size = _sanitize(body.get('serving_size', ''), 40)
                 exp_date = _sanitize(body.get('exp_date', ''), 10)
                 product_type = _sanitize(body.get('product_type', 'cartridge'), 20)
                 label_size = body.get('label_size', 'medium')
+
+                # Validate strain_type
+                if strain_type not in ('Sativa', 'Indica', 'Hybrid'):
+                    strain_type = 'Hybrid'
 
                 # Validate label_size
                 if label_size not in ('small', 'medium', 'large'):
@@ -601,6 +630,8 @@ class LabelHandler(http.server.BaseHTTPRequestHandler):
 
                 generate_label(
                     strain=strain,
+                    strain_type=strain_type,
+                    total_weight=total_weight,
                     thc_mg=thc_mg,
                     serving_size=serving_size,
                     batch=batch,
