@@ -390,7 +390,7 @@ function populateExpDates() {
   const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
   const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   let html = '';
-  for (let i = 6; i <= 30; i++) {
+  for (let i = 6; i <= 60; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     html += `<option value="${months[d.getMonth()]}/${d.getFullYear()}">${names[d.getMonth()]} ${d.getFullYear()}</option>`;
   }
