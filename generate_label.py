@@ -209,7 +209,7 @@ def generate_medium(c, W, H, strain, thc_mg, serving_size, batch, exp_date, prod
 
     # ── Strain name — bold, prominent ──
     c.setFillColor(TXT)
-    strain_upper = strain.upper()
+    strain_upper = strain.upper()[:28]
     fs = 14 if len(strain_upper) <= 14 else 11 if len(strain_upper) <= 20 else 9
     c.setFont("Helvetica-Bold", fs)
     c.drawCentredString(W / 2, y - fs + 2, strain_upper)
@@ -333,7 +333,7 @@ def generate_large(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
 
     # ── Strain name ──
     c.setFillColor(TXT)
-    strain_upper = strain.upper()
+    strain_upper = strain.upper()[:30]
     fs = 20 if len(strain_upper) <= 12 else 16 if len(strain_upper) <= 18 else 12
     c.setFont("Helvetica-Bold", fs)
     c.drawCentredString(W / 2, y - fs + 2, strain_upper)

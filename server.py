@@ -502,11 +502,13 @@ function renderHistory() {
 
 import re
 import time
+import traceback
 from collections import defaultdict
 
 # ── Security: rate limiter ──────────────────────────────────
 _rate_limit = defaultdict(list)  # ip -> [timestamps]
 MAX_REQUESTS_PER_MIN = 20
+_RATE_LIMIT_MAX_IPS = 10000
 
 def _is_rate_limited(ip):
     now = time.time()
@@ -514,21 +516,42 @@ def _is_rate_limited(ip):
     if len(_rate_limit[ip]) >= MAX_REQUESTS_PER_MIN:
         return True
     _rate_limit[ip].append(now)
+    # Bound memory: drop stale IPs if the table grows too large
+    if len(_rate_limit) > _RATE_LIMIT_MAX_IPS:
+        for k in [k for k, v in _rate_limit.items() if not v]:
+            del _rate_limit[k]
     return False
 
 def _sanitize(text, max_len=50):
-    """Strip anything that isn't alphanumeric, space, dash, dot, slash, or parens."""
+    """Collapse whitespace to a single space; strip anything that isn't
+    alphanumeric, space, dash, dot, slash, or parens. Newlines/tabs would
+    otherwise break PDF text layout."""
     if not isinstance(text, str):
         return ""
     text = text[:max_len]
-    return re.sub(r'[^\w\s\-\./()\#]', '', text)
+    text = re.sub(r'\s+', ' ', text)
+    return re.sub(r'[^\w \-\./()\#]', '', text).strip()
 
 def _safe_filename(text):
     """Only allow safe filename characters."""
     return re.sub(r'[^a-zA-Z0-9_\-]', '', text.replace(' ', '_'))
 
+_EXP_DATE_RE = re.compile(r'^(0[1-9]|1[0-2])/(20\d{2})$')
+_VALID_WEIGHTS = {'1g', '3.5g', '7g', '14g', '28g'}
+_VALID_PRODUCT_TYPES = {
+    'cartridge', 'disposable', 'gummies', 'preroll',
+    'flower', 'concentrate', 'tincture', 'edible',
+}
+
 
 class LabelHandler(http.server.BaseHTTPRequestHandler):
+
+    def _json_error(self, code, message):
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json')
+        self._send_security_headers()
+        self.end_headers()
+        self.wfile.write(json.dumps({'success': False, 'error': message}).encode())
 
     def _send_security_headers(self):
         self.send_header('X-Content-Type-Options', 'nosniff')
@@ -604,28 +627,53 @@ class LabelHandler(http.server.BaseHTTPRequestHandler):
 
             try:
                 # Sanitize all inputs
-                strain = _sanitize(body.get('strain', 'Unknown'), 30)
+                strain = _sanitize(body.get('strain', ''), 30)
                 strain_type = _sanitize(body.get('strain_type', 'Hybrid'), 10)
                 total_weight = _sanitize(body.get('total_weight', '3.5g'), 10)
-                batch = _sanitize(body.get('batch', 'BATCH'), 30)
+                batch = _sanitize(body.get('batch', ''), 30)
                 thc_mg = _sanitize(body.get('thc_mg', '25'), 10)
                 serving_size = _sanitize(body.get('serving_size', ''), 40)
                 exp_date = _sanitize(body.get('exp_date', ''), 10)
                 product_type = _sanitize(body.get('product_type', 'cartridge'), 20)
                 label_size = body.get('label_size', 'medium')
 
-                # Validate strain_type
+                # Required fields — compliance requires real strain + batch
+                if not strain:
+                    return self._json_error(400, 'Strain name is required')
+                if not batch:
+                    return self._json_error(400, 'Batch number is required')
+                if not serving_size:
+                    return self._json_error(400, 'Serving size is required')
+
+                # Whitelist validation
                 if strain_type not in ('Sativa', 'Indica', 'Hybrid'):
                     strain_type = 'Hybrid'
-
-                # Validate label_size
                 if label_size not in ('small', 'medium', 'large'):
                     label_size = 'medium'
+                if product_type not in _VALID_PRODUCT_TYPES:
+                    product_type = 'cartridge'
+                if total_weight not in _VALID_WEIGHTS:
+                    total_weight = '3.5g'
 
-                # Safe filename
-                safe_strain = _safe_filename(strain)
-                safe_batch = _safe_filename(batch)
-                filename = f"label_{safe_strain}_{safe_batch}_{label_size}.pdf"
+                # THCa must be a positive integer within realistic mg range
+                try:
+                    thc_val = int(thc_mg)
+                    if not (1 <= thc_val <= 1000):
+                        raise ValueError
+                    thc_mg = str(thc_val)
+                except ValueError:
+                    return self._json_error(400, 'Invalid THCa amount')
+
+                # Expiration must be MM/YYYY (compliance — Rule 5K-4.034)
+                if not _EXP_DATE_RE.match(exp_date):
+                    return self._json_error(400, 'Invalid expiration date (expected MM/YYYY)')
+
+                # Unique filename: strain_batch_size_epochmillis.pdf avoids
+                # collisions when the same label is generated twice.
+                safe_strain = _safe_filename(strain) or 'label'
+                safe_batch = _safe_filename(batch) or 'batch'
+                ts = int(time.time() * 1000)
+                filename = f"label_{safe_strain}_{safe_batch}_{label_size}_{ts}.pdf"
                 out_path = os.path.join(OUTPUT_DIR, filename)
 
                 generate_label(
@@ -646,7 +694,8 @@ class LabelHandler(http.server.BaseHTTPRequestHandler):
                 self._send_security_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({'success': True, 'filename': filename}).encode())
-            except Exception as e:
+            except Exception:
+                traceback.print_exc()
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
                 self._send_security_headers()
