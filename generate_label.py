@@ -132,7 +132,7 @@ def generate_small(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
     ptype = PRODUCT_TYPES.get(product_type, product_type.upper())
     c.setFillColor(TXT3)
     c.setFont("Helvetica", 4)
-    c.drawString(M + 16, y - 10, f"THCa {ptype}  ·  {strain_type}  ·  {total_weight}")
+    c.drawString(M + 16, y - 10, f"HEMP {ptype}  ·  {strain_type}  ·  {total_weight}")
 
     y -= 15
     hline(c, y, M, W - M)
@@ -201,7 +201,7 @@ def generate_medium(c, W, H, strain, thc_mg, serving_size, batch, exp_date, prod
     ptype = PRODUCT_TYPES.get(product_type, product_type.upper())
     c.setFillColor(TXT3)
     c.setFont("Helvetica", 5)
-    c.drawString(M + 24, y - 14, f"THCa {ptype}  ·  {strain_type}  ·  {total_weight}")
+    c.drawString(M + 24, y - 14, f"HEMP {ptype}  ·  {strain_type}  ·  {total_weight}")
 
     y -= 22
     hline(c, y, M, W - M)
@@ -322,7 +322,7 @@ def generate_large(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
     ptype = PRODUCT_TYPES.get(product_type, product_type.upper())
     c.setFillColor(TXT3)
     c.setFont("Helvetica", 6.5)
-    c.drawString(M + 32, y - 18, f"THCa {ptype}  ·  {strain_type}  ·  {total_weight}")
+    c.drawString(M + 32, y - 18, f"HEMP {ptype}  ·  {strain_type}  ·  {total_weight}")
     c.setFillColor(TXT4)
     c.setFont("Helvetica", 5)
     c.drawString(M + 32, y - 26, "Smoke Shop & Lounge  ·  Tampa Bay, FL")
