@@ -15,6 +15,14 @@ from reportlab.lib.pagesizes import inch
 from reportlab.lib.colors import HexColor, white, black
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase.pdfmetrics import stringWidth
+
+
+def fit_font_size(text, font, size, max_width, min_size=4):
+    """Largest font size <= size at which text fits in max_width."""
+    while size > min_size and stringWidth(text, font, size) > max_width:
+        size -= 0.25
+    return size
 
 
 # ── Colors — minimal ───────────────────────────────────────
@@ -125,8 +133,9 @@ def generate_small(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
     draw_thca_triangle(c, tri_cx, tri_cy, tri_size)
 
     c.setFillColor(TXT)
-    c.setFont("Helvetica-Bold", 7)
-    strain_display = strain.upper()[:18]
+    strain_display = strain.upper()
+    fs = fit_font_size(strain_display, "Helvetica-Bold", 7, W - M - (M + 16))
+    c.setFont("Helvetica-Bold", fs)
     c.drawString(M + 16, y - 4, strain_display)
 
     ptype = PRODUCT_TYPES.get(product_type, product_type.upper())
@@ -209,8 +218,8 @@ def generate_medium(c, W, H, strain, thc_mg, serving_size, batch, exp_date, prod
 
     # ── Strain name — bold, prominent ──
     c.setFillColor(TXT)
-    strain_upper = strain.upper()[:28]
-    fs = 14 if len(strain_upper) <= 14 else 11 if len(strain_upper) <= 20 else 9
+    strain_upper = strain.upper()
+    fs = fit_font_size(strain_upper, "Helvetica-Bold", 14, IW - 8, min_size=7)
     c.setFont("Helvetica-Bold", fs)
     c.drawCentredString(W / 2, y - fs + 2, strain_upper)
     y -= (fs + 4)
@@ -333,8 +342,8 @@ def generate_large(c, W, H, strain, thc_mg, serving_size, batch, exp_date, produ
 
     # ── Strain name ──
     c.setFillColor(TXT)
-    strain_upper = strain.upper()[:30]
-    fs = 20 if len(strain_upper) <= 12 else 16 if len(strain_upper) <= 18 else 12
+    strain_upper = strain.upper()
+    fs = fit_font_size(strain_upper, "Helvetica-Bold", 20, IW - 10, min_size=9)
     c.setFont("Helvetica-Bold", fs)
     c.drawCentredString(W / 2, y - fs + 2, strain_upper)
     y -= (fs + 6)
